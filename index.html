@@ -308,7 +308,73 @@
             <a href="https://linktr.ee/vexa.webstudio.contact" class="btn-contact" style="padding: 15px 40px; font-size:16px;">Mulai Konsultasi</a>
         </div>
     </section>
+    <!-- REVIEWS / ULASAN -->
+    <section id="reviews" style="background: rgba(255,255,255,0.01); border-top: 1px solid var(--border);">
+        <div class="section-header reveal">
+            <div class="tag">Testimonial</div>
+            <h2>Apa Kata Mereka?</h2>
+            <p>Bagikan pengalamanmu bekerja sama dengan Vexa WebStudio.</p>
+        </div>
+        <div class="review-container reveal">
+            <!-- Form Ulasan (Kiri) -->
+            <div class="review-form-card">
+                <h3 style="margin-bottom: 24px; font-size: 1.5rem;">Tambahkan Ulasan</h3>
+                <form id="reviewForm">
+                    <div class="input-group">
+                        <label>Nama</label>
+                        <input type="text" id="revName" required placeholder="Masukkan nama kamu">
+                    </div>
+                    <div class="input-group">
+                        <label>Email</label>
+                        <input type="email" id="revEmail" required placeholder="Masukkan email kamu">
+                    </div>
+                        
+                    <!-- Checkbox Anonymous -->
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="revAnon">
+                        <label for="revAnon">Sembunyikan email saya (Anonymous)</label>
+                    </div>
 
+                    <div class="input-group">
+                        <label>Penilaian</label>
+                        <div class="star-rating" id="starRating">
+                            <span data-value="1">★</span>
+                            <span data-value="2">★</span>
+                            <span data-value="3">★</span>
+                            <span data-value="4">★</span>
+                            <span data-value="5">★</span>
+                        </div>
+                        <input type="hidden" id="revStars" value="5" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Ulasan</label>
+                        <textarea id="revText" required placeholder="Bagaimana hasil layanan kami?"></textarea>
+                    </div>
+
+                    <!-- Upload Gambar/Video -->
+                    <div class="input-group">
+                        <label>Lampiran Gambar/Video (Opsional)</label>
+                        <input type="file" id="revMedia" accept="image/*, video/*" style="padding: 10px; cursor: pointer;">
+                    </div>
+
+                    <button type="submit" class="btn-contact" style="width: 100%; cursor: pointer;">Kirim Ulasan</button>
+                </form>
+            </div>
+
+            <!-- Daftar Ulasan (Kanan) -->
+            <div class="reviews-list" id="reviewsList">
+                <!-- Contoh Ulasan Default -->
+                <div class="review-item">
+                    <div class="rev-header">
+                        <strong>Rendy</strong> <span class="rev-email">| rendy01@gmail.com</span>
+                    </div>
+                    <div class="rev-stars">⭐⭐⭐⭐⭐</div>
+                    <p class="rev-desc">Layanan sangat memuaskan, website bisnis saya jadi lebih profesional dan interaktif. Recommended banget!</p>
+                </div>
+            </div>
+        </div>
+    </section>
     <!-- FOOTER -->
     <footer>
         <div class="footer-top">
@@ -366,6 +432,86 @@
 
         revealElements.forEach(el => {
             revealOnScroll.observe(el);
+        });
+
+        // ================= REVIEW LOGIC =================
+        const stars = document.querySelectorAll('#starRating span');
+        const ratingInput = document.getElementById('revStars');
+        const reviewForm = document.getElementById('reviewForm');
+        const reviewsList = document.getElementById('reviewsList');
+
+        // Bikin bintang default 5
+        updateStars(5);
+
+        // Efek klik bintang
+        stars.forEach(star => {
+            star.addEventListener('click', function() {
+                const value = this.getAttribute('data-value');
+                ratingInput.value = value;
+                updateStars(value);
+            });
+        });
+
+        function updateStars(val) {
+            stars.forEach(s => {
+                if(s.getAttribute('data-value') <= val) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                }
+            });
+        }
+
+        // Logic pas tombol 'Kirim Ulasan' dipencet
+        reviewForm.addEventListener('submit', function(e) {
+            e.preventDefault(); 
+
+            const name = document.getElementById('revName').value;
+            const email = document.getElementById('revEmail').value;
+            const isAnon = document.getElementById('revAnon').checked;
+            const rating = parseInt(document.getElementById('revStars').value);
+            const text = document.getElementById('revText').value;
+            
+            // Ambil file gambar/video yang diupload
+            const mediaInput = document.getElementById('revMedia');
+            const mediaFile = mediaInput.files[0];
+            let mediaHTML = '';
+
+            // Kalau ada file yang diupload, buat URL sementara untuk preview
+            if (mediaFile) {
+                const mediaUrl = URL.createObjectURL(mediaFile);
+                
+                // Cek apakah file berupa gambar atau video
+                if (mediaFile.type.startsWith('image/')) {
+                    mediaHTML = `<img src="${mediaUrl}" class="rev-media" alt="Lampiran Ulasan">`;
+                } else if (mediaFile.type.startsWith('video/')) {
+                    mediaHTML = `<video src="${mediaUrl}" class="rev-media" controls></video>`;
+                }
+            }
+
+            // Atur email (muncul atau anonymous)
+            let emailDisplay = isAnon ? '' : `<span class="rev-email"> | ${email}</span>`;
+            let starsHtml = '⭐'.repeat(rating);
+
+            // Masukkan variabel mediaHTML ke dalam kerangka ulasan
+            const reviewHTML = `
+                <div class="review-item">
+                    <div class="rev-header">
+                        <strong>${name}</strong> ${emailDisplay}
+                    </div>
+                    <div class="rev-stars">${starsHtml}</div>
+                    <p class="rev-desc">${text}</p>
+                    ${mediaHTML}
+                </div>
+            `;
+
+            // Masukin ulasan baru ke paling atas daftar (kanan)
+            reviewsList.insertAdjacentHTML('afterbegin', reviewHTML);
+
+            // Bersihin form setelah ngirim
+            reviewForm.reset();
+            updateStars(5); 
+            ratingInput.value = 5;
         });
     </script>
 </body>
