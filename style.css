@@ -718,6 +718,14 @@ footer{padding:70px 6vw 40px;border-top:1px solid rgba(255,255,255,0.08);}
     display: block;
 }
 
+/* ================= DISABLED INPUT STYLE ================= */
+.input-group input:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: rgba(255, 255, 255, 0.01);
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
 @media (max-width: 768px) {
     .review-container { grid-template-columns: 1fr; }
 }
@@ -924,4 +932,51 @@ img {
     .nav-logo img {
         width: 115px !important;
     }
+}
+
+/* ================= THUMBNAILS, ALERT & LIGHTBOX ================= */
+.rev-thumbnails {
+    display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;
+}
+.rev-thumb {
+    width: 80px; height: 80px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 1px solid var(--border); transition: transform 0.2s;
+}
+.rev-thumb:hover { transform: scale(1.05); }
+
+/* CUSTOM ALERT POPUP */
+.custom-alert {
+    position: fixed; top: 30px; right: 30px; background: var(--surface);
+    border-left: 4px solid var(--primary); padding: 15px 20px; border-radius: 8px;
+    z-index: 9999; display: flex; gap: 15px; align-items: center; justify-content: space-between;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5); color: white; font-size: 14px;
+    transform: translateX(150%); transition: transform 0.4s var(--ease);
+}
+.custom-alert.show { transform: translateX(0); }
+.custom-alert button { background: none; border: none; color: white; cursor: pointer; font-size: 16px; opacity: 0.7; }
+.custom-alert button:hover { opacity: 1; }
+
+/* LIGHTBOX POPUP */
+.lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000;
+    display: flex; justify-content: center; align-items: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+.lightbox.show { opacity: 1; pointer-events: auto; }
+.lightbox img { max-width: 90vw; max-height: 85vh; object-fit: contain; border-radius: 8px; }
+
+/* Tombol Tutup & Arah Kiri-Kanan */
+.lb-close {
+    position: absolute; top: 20px; right: 30px; font-size: 30px; color: white; background: none; border: none; cursor: pointer;
+}
+.lb-nav {
+    position: absolute; top: 50%; transform: translateY(-50%); font-size: 40px; color: white; background: rgba(255,255,255,0.1); border: none; padding: 10px 20px; cursor: pointer; border-radius: 8px; transition: background 0.3s;
+}
+.lb-nav:hover { background: rgba(255,255,255,0.3); }
+.lb-prev { left: 20px; }
+.lb-next { right: 20px; }
+
+@media (max-width: 768px) {
+    .custom-alert { top: 20px; left: 20px; right: 20px; width: auto; transform: translateY(-150%); }
+    .custom-alert.show { transform: translateY(0); }
+    .lb-nav { font-size: 24px; padding: 10px; }
 }

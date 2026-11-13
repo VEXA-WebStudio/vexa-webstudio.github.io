@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <!-- NAVBAR -->
     <nav>
         <a href="#" class="nav-logo">
@@ -25,6 +24,7 @@
             <a href="#pricing">Paket</a>
             <a href="#academy">Academy</a>
             <a href="#studios">Studios</a>
+            <a href="#reviews">Ulasan</a>
         </div>
         <a href="#contact" class="btn-contact">Hubungi Kami</a>
     </nav>
@@ -352,10 +352,11 @@
                         <textarea id="revText" required placeholder="Bagaimana hasil layanan kami?"></textarea>
                     </div>
 
-                    <!-- Upload Gambar/Video -->
+                    <!-- Upload Gambar -->
                     <div class="input-group">
                         <label>Lampiran Gambar/Video (Opsional)</label>
-                        <input type="file" id="revMedia" accept="image/*, video/*" style="padding: 10px; cursor: pointer;">
+                        <input type="file" id="revMedia" accept=".png, .jpg, .jpeg, image/png, image/jpeg" multiple style="padding: 10px; cursor: pointer;">
+                        <small style="color:var(--text-muted); font-size:12px; margin-top:-5px;">Maks. 2 Foto (JPG/PNG). Ukuran Maks. 15MB/file.</small>
                     </div>
 
                     <button type="submit" class="btn-contact" style="width: 100%; cursor: pointer;">Kirim Ulasan</button>
@@ -434,85 +435,224 @@
             revealOnScroll.observe(el);
         });
 
-        // ================= REVIEW LOGIC =================
+    // ================= REVIEW LOGIC =================
+        // 1. PASTE WEB APP URL KAMU DI SINI
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbyEgtHAgHHR4zbT8kAy_q6KaEmvo5UWRp2w0U9h_k9UmnKz2djDj4uMgPHfC2Zneac6/exec';
+
         const stars = document.querySelectorAll('#starRating span');
         const ratingInput = document.getElementById('revStars');
         const reviewForm = document.getElementById('reviewForm');
         const reviewsList = document.getElementById('reviewsList');
+        const mediaInput = document.getElementById('revMedia');
+        const anonCheckbox = document.getElementById('revAnon');
+        const emailInput = document.getElementById('revEmail');
 
-        // Bikin bintang default 5
+
+        function updateStars(val) {
+            stars.forEach(s => s.classList.toggle('active', s.getAttribute('data-value') <= val));
+        }
         updateStars(5);
 
-        // Efek klik bintang
         stars.forEach(star => {
             star.addEventListener('click', function() {
-                const value = this.getAttribute('data-value');
-                ratingInput.value = value;
-                updateStars(value);
+                ratingInput.value = this.getAttribute('data-value');
+                updateStars(ratingInput.value);
             });
         });
 
-        function updateStars(val) {
-            stars.forEach(s => {
-                if(s.getAttribute('data-value') <= val) {
-                    s.classList.add('active');
-                } else {
-                    s.classList.remove('active');
+        // ================= CUSTOM ALERT =================
+        let alertTimer;
+        function showAlert(msg) {
+            const alertBox = document.getElementById('customAlert');
+            document.getElementById('alertMsg').innerText = msg;
+            alertBox.classList.add('show');
+            clearTimeout(alertTimer);
+            alertTimer = setTimeout(closeAlert, 4000);
+        }
+        function closeAlert() { document.getElementById('customAlert').classList.remove('show'); }
+
+        // ================= VALIDASI FILE SEBELUM UPLOAD =================
+        mediaInput.addEventListener('change', function() {
+            if(this.files.length > 2) {
+                showAlert("❌ Maksimal hanya 2 foto yang diizinkan.");
+                this.value = ''; // Reset input
+                return;
+            }
+            for(let i = 0; i < this.files.length; i++) {
+                const file = this.files[i];
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+                if(!validTypes.includes(file.type)) {
+                    showAlert(`❌ Format ditolak! File "${file.name}" bukan JPG/PNG.`);
+                    this.value = '';
+                    return;
                 }
+                if(file.size > 15 * 1024 * 1024) { // 15 Megabytes
+                    showAlert(`❌ Terlalu besar! File "${file.name}" melebihi batas 15MB.`);
+                    this.value = '';
+                    return;
+                }
+            }
+        });
+
+        // ================= LOGIKA LIGHTBOX =================
+        let lbImages = [];
+        let lbIndex = 0;
+
+        function openLightbox(urlsStr, index) {
+            lbImages = urlsStr.split(',');
+            lbIndex = index;
+            document.getElementById('lb-img').src = lbImages[lbIndex].trim();
+            
+            // Tampilkan tombol navigasi hanya jika gambar lebih dari 1
+            const navBtns = document.querySelectorAll('.lb-nav');
+            navBtns.forEach(btn => btn.style.display = lbImages.length > 1 ? 'block' : 'none');
+            
+            document.getElementById('lightbox').classList.add('show');
+        }
+        function closeLightbox() { document.getElementById('lightbox').classList.remove('show'); }
+        function prevImage() {
+            lbIndex = (lbIndex - 1 + lbImages.length) % lbImages.length;
+            document.getElementById('lb-img').src = lbImages[lbIndex].trim();
+        }
+        function nextImage() {
+            lbIndex = (lbIndex + 1) % lbImages.length;
+            document.getElementById('lb-img').src = lbImages[lbIndex].trim();
+        }
+
+        // ================= CONVERT FILE TO BASE64 =================
+        function getBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
             });
         }
 
-        // Logic pas tombol 'Kirim Ulasan' dipencet
-        reviewForm.addEventListener('submit', function(e) {
-            e.preventDefault(); 
+        // ================= GET: TAMPILKAN ULASAN =================
+        async function loadReviews() {
+            reviewsList.innerHTML = '<p style="text-align:center; color:gray;">Memuat ulasan...</p>';
+            try {
+                const response = await fetch(scriptURL);
+                const data = await response.json();
+                reviewsList.innerHTML = data.length ? '' : '<p style="text-align:center; color:gray;">Belum ada ulasan.</p>';
 
-            const name = document.getElementById('revName').value;
-            const email = document.getElementById('revEmail').value;
-            const isAnon = document.getElementById('revAnon').checked;
-            const rating = parseInt(document.getElementById('revStars').value);
-            const text = document.getElementById('revText').value;
-            
-            // Ambil file gambar/video yang diupload
-            const mediaInput = document.getElementById('revMedia');
-            const mediaFile = mediaInput.files[0];
-            let mediaHTML = '';
+                data.forEach((item) => {
+                    let emailDisplay = item.isAnon ? '' : `<span class="rev-email"> | ${item.email}</span>`;
+                    let starsHtml = '⭐'.repeat(item.rating);
+                    
+                    // Kumpulkan URL yang ada isi (tidak kosong) ke dalam array
+                    let urls = [];
+                    if (item.fotoUrl1 && item.fotoUrl1.trim() !== '') urls.push(item.fotoUrl1);
+                    if (item.fotoUrl2 && item.fotoUrl2.trim() !== '') urls.push(item.fotoUrl2);
 
-            // Kalau ada file yang diupload, buat URL sementara untuk preview
-            if (mediaFile) {
-                const mediaUrl = URL.createObjectURL(mediaFile);
-                
-                // Cek apakah file berupa gambar atau video
-                if (mediaFile.type.startsWith('image/')) {
-                    mediaHTML = `<img src="${mediaUrl}" class="rev-media" alt="Lampiran Ulasan">`;
-                } else if (mediaFile.type.startsWith('video/')) {
-                    mediaHTML = `<video src="${mediaUrl}" class="rev-media" controls></video>`;
-                }
+                    let mediaHTML = '';
+                    if (urls.length > 0) {
+                        mediaHTML = '<div class="rev-thumbnails">';
+                        // Gabungkan kembali jadi string untuk dikirim ke fungsi Lightbox
+                        const lightboxData = urls.join(','); 
+                        
+                        urls.forEach((url, idx) => {
+                            mediaHTML += `<img src="${url.trim()}" class="rev-thumb" onclick="openLightbox('${lightboxData}', ${idx})" alt="Lampiran">`;
+                        });
+                        mediaHTML += '</div>';
+                    }
+
+                    const reviewHTML = `
+                        <div class="review-item">
+                            <div class="rev-header">
+                                <strong>${item.name}</strong> ${emailDisplay}
+                            </div>
+                            <div class="rev-stars">${starsHtml}</div>
+                            <p class="rev-desc">${item.text}</p>
+                            ${mediaHTML}
+                        </div>
+                    `;
+                    reviewsList.insertAdjacentHTML('beforeend', reviewHTML);
+                });
+            } catch (error) {
+                reviewsList.innerHTML = '<p style="text-align:center; color:red;">Gagal memuat ulasan.</p>';
             }
+        }
+        loadReviews();
 
-            // Atur email (muncul atau anonymous)
-            let emailDisplay = isAnon ? '' : `<span class="rev-email"> | ${email}</span>`;
-            let starsHtml = '⭐'.repeat(rating);
+        // ================= LOGIKA ANONIMUS & EMAIL =================
+        anonCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                // Jika anonim dicentang: matikan wajib isi, kunci kolom, dan kosongkan isinya
+                emailInput.required = false;
+                emailInput.disabled = true;
+                emailInput.value = ''; 
+            } else {
+                // Jika anonim batal dicentang: wajib isi nyala lagi, dan kolom dibuka
+                emailInput.required = true;
+                emailInput.disabled = false;
+            }
+        });
 
-            // Masukkan variabel mediaHTML ke dalam kerangka ulasan
-            const reviewHTML = `
-                <div class="review-item">
-                    <div class="rev-header">
-                        <strong>${name}</strong> ${emailDisplay}
-                    </div>
-                    <div class="rev-stars">${starsHtml}</div>
-                    <p class="rev-desc">${text}</p>
-                    ${mediaHTML}
-                </div>
-            `;
+        // ================= POST: KIRIM ULASAN =================
+        reviewForm.addEventListener('submit', async function(e) {
+            e.preventDefault(); 
+            
+            const submitBtn = reviewForm.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerText;
+            submitBtn.innerText = "Mengirim...";
+            submitBtn.disabled = true;
 
-            // Masukin ulasan baru ke paling atas daftar (kanan)
-            reviewsList.insertAdjacentHTML('afterbegin', reviewHTML);
+            try {
+                let imagesArray = [];
+                // Proses semua gambar yang dilampirkan (maks. 2)
+                if (mediaInput.files.length > 0) {
+                    for(let i = 0; i < mediaInput.files.length; i++) {
+                        let base64 = await getBase64(mediaInput.files[i]);
+                        imagesArray.push({
+                            name: Date.now() + '_' + mediaInput.files[i].name,
+                            base64: base64
+                        });
+                    }
+                }
 
-            // Bersihin form setelah ngirim
-            reviewForm.reset();
-            updateStars(5); 
-            ratingInput.value = 5;
+                const payload = {
+                    name: document.getElementById('revName').value,
+                    email: document.getElementById('revEmail').value,
+                    isAnon: document.getElementById('revAnon').checked,
+                    rating: parseInt(document.getElementById('revStars').value),
+                    text: document.getElementById('revText').value,
+                    images: imagesArray // Kirim bentuk array ke Apps Script
+                };
+
+                await fetch(scriptURL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+
+                reviewForm.reset();
+                updateStars(5); 
+                ratingInput.value = 5;
+                loadReviews();
+                
+                showAlert("✅ Ulasan berhasil dikirim!");
+                
+            } catch (error) {
+                showAlert("❌ Terjadi kesalahan saat mengirim ulasan.");
+            } finally {
+                submitBtn.innerText = originalBtnText;
+                submitBtn.disabled = false;
+            }
         });
     </script>
+    <!-- ================= CUSTOM ALERT & LIGHTBOX ================= -->
+    <div id="customAlert" class="custom-alert">
+        <span id="alertMsg">Pesan di sini</span>
+        <button onclick="closeAlert()">✕</button>
+    </div>
+
+    <div id="lightbox" class="lightbox">
+        <button class="lb-close" onclick="closeLightbox()">✕</button>
+        <button class="lb-nav lb-prev" onclick="prevImage()">❮</button>
+        <img id="lb-img" src="" alt="Preview">
+        <button class="lb-nav lb-next" onclick="nextImage()">❯</button>
+    </div>
 </body>
 </html>
